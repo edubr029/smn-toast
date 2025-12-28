@@ -1,0 +1,28 @@
+{
+    "schemaVersion": 1,
+    "id": "smn-toast",
+    "version": "${version}",
+    "name": "System Music Notification Toast",
+    "description": "Shows toast notifications when music starts playing on your system via MPRIS",
+    "authors": [
+        "edubr029"
+    ],
+    "contact": {
+        "homepage": "https://github.com/edubr029/smn-toast",
+        "sources": "https://github.com/edubr029/smn-toast"
+    },
+    "license": "MIT",
+    "icon": "assets/smn-toast/icon.png",
+    "environment": "client",
+    "entrypoints": {
+        "client": [
+            "com.smntoast.client.SmnToastClient"
+        ]
+    },
+    "depends": {
+        "fabricloader": ">=0.18.0",
+        "minecraft": "~1.21.11",
+        "java": ">=21",
+        "fabric-api": "*"
+    }
+}
