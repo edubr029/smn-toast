@@ -9,11 +9,22 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * MPRIS listener that uses playerctl to monitor music playback on Linux.
  * This is a simpler approach than using dbus-java directly.
+ * Supports both native and Flatpak installations.
  */
 public class MprisListener {
     private Thread listenerThread;
     private volatile boolean running = false;
     private final AtomicReference<TrackInfo> currentTrack = new AtomicReference<>(null);
+    private final boolean isFlatpak;
+    
+    public MprisListener() {
+        // Detect if running inside a Flatpak sandbox
+        this.isFlatpak = System.getenv("FLATPAK_ID") != null || 
+                         new java.io.File("/.flatpak-info").exists();
+        if (isFlatpak) {
+            SmnToastClient.LOGGER.info("Flatpak environment detected, using flatpak-spawn for host access");
+        }
+    }
     
     public void start() {
         if (running) {
@@ -90,7 +101,19 @@ public class MprisListener {
     
     private String executeCommand(String... command) {
         try {
-            ProcessBuilder pb = new ProcessBuilder(command);
+            String[] actualCommand;
+            
+            // If running in Flatpak, use flatpak-spawn to run command on host
+            if (isFlatpak) {
+                actualCommand = new String[command.length + 2];
+                actualCommand[0] = "flatpak-spawn";
+                actualCommand[1] = "--host";
+                System.arraycopy(command, 0, actualCommand, 2, command.length);
+            } else {
+                actualCommand = command;
+            }
+            
+            ProcessBuilder pb = new ProcessBuilder(actualCommand);
             pb.redirectErrorStream(true);
             Process process = pb.start();
             
@@ -103,11 +126,15 @@ public class MprisListener {
             
             int exitCode = process.waitFor();
             if (exitCode != 0) {
+                // Only log at debug level - exit code 1 is normal when no player or metadata available
+                SmnToastClient.LOGGER.debug("Command returned exit code {}: {}", 
+                    exitCode, String.join(" ", actualCommand));
                 return null;
             }
             
             return output.toString();
         } catch (Exception e) {
+            SmnToastClient.LOGGER.debug("Command exception: {}", e.getMessage());
             return null;
         }
     }
