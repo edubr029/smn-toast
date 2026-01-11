@@ -34,5 +34,7 @@ Or using **Flatseal**:
 3. Add `org.freedesktop.Flatpak`
 
 Restart the launcher after applying the permission.
+
+Warning: used permission open sandbox hole for executing arbitrary commands and may potentially provide attack vector for [malicious mods](https://github.com/trigram-mrp/fractureiser/).
 ## Note
-This mod is designed for Linux systems only. It will not function on Windows or macOS as it relies on the MPRIS D-Bus interface.
+This mod is designed for Linux systems only. It will not function on Windows or macOS as it relies on the MPRIS D-Bus interface. 
