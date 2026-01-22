@@ -3,7 +3,7 @@
     "id": "smn-toast",
     "version": "${version}",
     "name": "System Music Notification Toast",
-    "description": "Shows toast notifications when music starts playing on your system via MPRIS",
+    "description": "Shows toast notifications when music starts playing on your system",
     "authors": [
         "edubr029"
     ],
