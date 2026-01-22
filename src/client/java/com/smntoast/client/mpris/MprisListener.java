@@ -24,12 +24,11 @@ public class MprisListener {
     private final boolean isFlatpak;
     
     public MprisListener() {
-        // Detect if running inside a Flatpak sandbox (Linux only)
         if (IS_LINUX) {
             this.isFlatpak = System.getenv("FLATPAK_ID") != null || 
                              new java.io.File("/.flatpak-info").exists();
             if (isFlatpak) {
-                SmnToastClient.LOGGER.info("Flatpak environment detected, using flatpak-spawn for host access");
+                SmnToastClient.LOGGER.info("Flatpak environment detected, using D-Bus for MPRIS access");
             }
         } else {
             this.isFlatpak = false;
@@ -38,7 +37,7 @@ public class MprisListener {
         if (IS_WINDOWS) {
             SmnToastClient.LOGGER.info("Windows detected, using SMTC for media info");
         } else if (IS_LINUX) {
-            SmnToastClient.LOGGER.info("Linux detected, using MPRIS/playerctl for media info");
+            SmnToastClient.LOGGER.info("Linux detected, using MPRIS for media info");
         } else {
             SmnToastClient.LOGGER.warn("Unsupported OS: {}. Media detection may not work.", OS_NAME);
         }
@@ -90,15 +89,19 @@ public class MprisListener {
     
     private TrackInfo fetchCurrentTrackLinux() {
         try {
-            String status = executeLinuxCommand("playerctl", "status");
+            if (isFlatpak) {
+                return fetchCurrentTrackDbus();
+            }
+            
+            String status = executeCommand("playerctl", "status");
             if (status == null || !status.trim().equalsIgnoreCase("Playing")) {
                 return new TrackInfo("", "", "", "", false);
             }
             
-            String title = executeLinuxCommand("playerctl", "metadata", "title");
-            String artist = executeLinuxCommand("playerctl", "metadata", "artist");
-            String album = executeLinuxCommand("playerctl", "metadata", "album");
-            String trackId = executeLinuxCommand("playerctl", "metadata", "mpris:trackid");
+            String title = executeCommand("playerctl", "metadata", "title");
+            String artist = executeCommand("playerctl", "metadata", "artist");
+            String album = executeCommand("playerctl", "metadata", "album");
+            String trackId = executeCommand("playerctl", "metadata", "mpris:trackid");
             
             if (title == null || title.isEmpty()) {
                 return null;
@@ -117,6 +120,157 @@ public class MprisListener {
             );
         } catch (Exception e) {
             SmnToastClient.LOGGER.debug("Error fetching MPRIS metadata: {}", e.getMessage());
+            return null;
+        }
+    }
+    
+    private TrackInfo fetchCurrentTrackDbus() {
+        try {
+            String player = findMprisPlayer();
+            if (player == null) {
+                return new TrackInfo("", "", "", "", false);
+            }
+            
+            String status = getDbusProperty(player, "PlaybackStatus");
+            if (status == null || !status.contains("Playing")) {
+                return new TrackInfo("", "", "", "", false);
+            }
+            
+            String metadata = getDbusProperty(player, "Metadata");
+            if (metadata == null) {
+                return null;
+            }
+            
+            String title = extractMetadataValue(metadata, "xesam:title");
+            String artist = extractMetadataValue(metadata, "xesam:artist");
+            String album = extractMetadataValue(metadata, "xesam:album");
+            String trackId = extractMetadataValue(metadata, "mpris:trackid");
+            
+            if (title == null || title.isEmpty()) {
+                return null;
+            }
+            
+            if (trackId == null || trackId.isEmpty()) {
+                trackId = (title + "-" + artist).hashCode() + "";
+            }
+            
+            return new TrackInfo(
+                trackId.trim(),
+                title.trim(),
+                artist != null && !artist.isEmpty() ? artist.trim() : "Unknown Artist",
+                album != null ? album.trim() : "",
+                true
+            );
+        } catch (Exception e) {
+            SmnToastClient.LOGGER.debug("Error fetching D-Bus MPRIS metadata: {}", e.getMessage());
+            return null;
+        }
+    }
+    
+    private String findMprisPlayer() {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                "dbus-send", "--session", "--dest=org.freedesktop.DBus",
+                "--type=method_call", "--print-reply",
+                "/org/freedesktop/DBus", "org.freedesktop.DBus.ListNames"
+            );
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("org.mpris.MediaPlayer2.")) {
+                    int start = line.indexOf("org.mpris.MediaPlayer2.");
+                    int end = line.indexOf("\"", start);
+                    if (end > start) {
+                        process.waitFor();
+                        return line.substring(start, end);
+                    }
+                }
+            }
+            process.waitFor();
+            return null;
+        } catch (Exception e) {
+            SmnToastClient.LOGGER.debug("Error finding MPRIS player: {}", e.getMessage());
+            return null;
+        }
+    }
+    
+    private String getDbusProperty(String player, String property) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(
+                "dbus-send", "--session", "--dest=" + player,
+                "--type=method_call", "--print-reply",
+                "/org/mpris/MediaPlayer2",
+                "org.freedesktop.DBus.Properties.Get",
+                "string:org.mpris.MediaPlayer2.Player",
+                "string:" + property
+            );
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            StringBuilder output = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+            }
+            process.waitFor();
+            return output.toString();
+        } catch (Exception e) {
+            SmnToastClient.LOGGER.debug("Error getting D-Bus property: {}", e.getMessage());
+            return null;
+        }
+    }
+    
+    private String extractMetadataValue(String metadata, String key) {
+        try {
+            int keyIndex = metadata.indexOf(key);
+            if (keyIndex == -1) {
+                return null;
+            }
+            
+            String afterKey = metadata.substring(keyIndex);
+            
+            if (key.equals("xesam:artist")) {
+                int arrayStart = afterKey.indexOf("array [");
+                if (arrayStart != -1) {
+                    int stringStart = afterKey.indexOf("string \"", arrayStart);
+                    if (stringStart != -1) {
+                        int valueStart = stringStart + 8;
+                        int valueEnd = afterKey.indexOf("\"", valueStart);
+                        if (valueEnd > valueStart) {
+                            return afterKey.substring(valueStart, valueEnd);
+                        }
+                    }
+                }
+            }
+            
+            int stringStart = afterKey.indexOf("string \"");
+            if (stringStart != -1) {
+                int valueStart = stringStart + 8;
+                int valueEnd = afterKey.indexOf("\"", valueStart);
+                if (valueEnd > valueStart) {
+                    return afterKey.substring(valueStart, valueEnd);
+                }
+            }
+            
+            int variantStart = afterKey.indexOf("variant");
+            if (variantStart != -1) {
+                String afterVariant = afterKey.substring(variantStart);
+                stringStart = afterVariant.indexOf("string \"");
+                if (stringStart != -1) {
+                    int valueStart = stringStart + 8;
+                    int valueEnd = afterVariant.indexOf("\"", valueStart);
+                    if (valueEnd > valueStart) {
+                        return afterVariant.substring(valueStart, valueEnd);
+                    }
+                }
+            }
+            
+            return null;
+        } catch (Exception e) {
             return null;
         }
     }
@@ -224,20 +378,9 @@ public class MprisListener {
         }
     }
     
-    private String executeLinuxCommand(String... command) {
+    private String executeCommand(String... command) {
         try {
-            String[] actualCommand;
-            
-            if (isFlatpak) {
-                actualCommand = new String[command.length + 2];
-                actualCommand[0] = "flatpak-spawn";
-                actualCommand[1] = "--host";
-                System.arraycopy(command, 0, actualCommand, 2, command.length);
-            } else {
-                actualCommand = command;
-            }
-            
-            ProcessBuilder pb = new ProcessBuilder(actualCommand);
+            ProcessBuilder pb = new ProcessBuilder(command);
             pb.redirectErrorStream(true);
             Process process = pb.start();
             
@@ -251,7 +394,7 @@ public class MprisListener {
             int exitCode = process.waitFor();
             if (exitCode != 0) {
                 SmnToastClient.LOGGER.debug("Command returned exit code {}: {}", 
-                    exitCode, String.join(" ", actualCommand));
+                    exitCode, String.join(" ", command));
                 return null;
             }
             

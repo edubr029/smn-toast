@@ -18,13 +18,13 @@ System Music Notification Toast (SMN Toast) is a client-side Fabric mod that det
 | Platform | Method | Requirements |
 |----------|--------|--------------|
 | **Windows** | SMTC (System Media Transport Controls) | None (built-in) |
-| **Linux** | MPRIS via playerctl | playerctl installed |
+| **Linux** | MPRIS via D-Bus | None (native) or playerctl (non-Flatpak) |
+| **Linux (Flatpak)** | MPRIS via D-Bus | Permission grant (see below) |
 
 ### How to use
 1. Install the mod in your Fabric mods folder
-2. **Linux only**: Make sure playerctl is installed on your system
-3. Start playing music in any compatible player
-4. A toast will appear when a new track starts
+2. Start playing music in any compatible player
+3. A toast will appear when a new track starts
 
 To manually show the current track, bind a key in Options → Controls → Key Binds → System Music Notification Toast.
 
@@ -33,16 +33,18 @@ To manually show the current track, bind a key in Options → Controls → Key B
 - **Linux**: Spotify, VLC, Firefox, Chromium, and any MPRIS-compatible player
 
 ## Flatpak Users (Linux)
-If you're using a Flatpak launcher (like PrismLauncher), you need to grant permission for the mod to communicate with the host system.
+If you're using a Flatpak launcher (like PrismLauncher), you need to grant permission for the mod to communicate with media players.
 
 Run this command:
 ```bash
-flatpak override --user org.prismlauncher.PrismLauncher --talk-name=org.freedesktop.Flatpak
+flatpak override --user org.prismlauncher.PrismLauncher '--talk-name=org.mpris.MediaPlayer2.*'
 ```
 
 Or using **Flatseal**:
 1. Open Flatseal and select your launcher (e.g., PrismLauncher)
 2. Go to **Session Bus** → **Talk**
-3. Add `org.freedesktop.Flatpak`
+3. Add `org.mpris.MediaPlayer2.*`
 
 Restart the launcher after applying the permission.
+
+> **Note**: This permission only allows communication with media players — it does not grant access to run commands on your host system.
