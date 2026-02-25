@@ -17,6 +17,7 @@ public class MprisListener {
     private static final String OS_NAME = System.getProperty("os.name").toLowerCase();
     private static final boolean IS_WINDOWS = OS_NAME.contains("win");
     private static final boolean IS_LINUX = OS_NAME.contains("nux") || OS_NAME.contains("nix");
+    private static final boolean IS_MAC = OS_NAME.contains("mac");
     
     private Thread listenerThread;
     private volatile boolean running = false;
@@ -38,6 +39,8 @@ public class MprisListener {
             SmnToastClient.LOGGER.info("Windows detected, using SMTC for media info");
         } else if (IS_LINUX) {
             SmnToastClient.LOGGER.info("Linux detected, using MPRIS for media info");
+        } else if (IS_MAC) {
+            SmnToastClient.LOGGER.info("macOS detected, using AppleScript for media info");
         } else {
             SmnToastClient.LOGGER.warn("Unsupported OS: {}. Media detection may not work.", OS_NAME);
         }
@@ -83,6 +86,8 @@ public class MprisListener {
             return fetchCurrentTrackWindows();
         } else if (IS_LINUX) {
             return fetchCurrentTrackLinux();
+        } else if (IS_MAC) {
+            return fetchCurrentTrackMac();
         }
         return null;
     }
@@ -345,6 +350,97 @@ public class MprisListener {
             return null;
         }
     }
+
+    private TrackInfo fetchCurrentTrackMac() {
+        TrackInfo spotify = fetchCurrentTrackMacSpotify();
+        if (spotify != null) {
+            return spotify;
+        }
+        return fetchCurrentTrackMacMusic();
+    }
+
+    private TrackInfo fetchCurrentTrackMacSpotify() {
+        return parseMacTrackInfo(executeMacCommand(
+            "osascript",
+            "-e", "tell application \"Spotify\"",
+            "-e", "if it is running then",
+            "-e", "set playerState to player state as string",
+            "-e", "if playerState is \"playing\" then",
+            "-e", "set trackName to name of current track",
+            "-e", "set trackArtist to artist of current track",
+            "-e", "set trackAlbum to album of current track",
+            "-e", "return \"STATUS:Playing\" & linefeed & \"TITLE:\" & trackName & linefeed & \"ARTIST:\" & trackArtist & linefeed & \"ALBUM:\" & trackAlbum",
+            "-e", "else",
+            "-e", "return \"STATUS:Paused\"",
+            "-e", "end if",
+            "-e", "else",
+            "-e", "return \"STATUS:NotRunning\"",
+            "-e", "end if",
+            "-e", "end tell"
+        ));
+    }
+
+    private TrackInfo fetchCurrentTrackMacMusic() {
+        return parseMacTrackInfo(executeMacCommand(
+            "osascript",
+            "-e", "tell application \"Music\"",
+            "-e", "if it is running then",
+            "-e", "set playerState to player state as string",
+            "-e", "if playerState is \"playing\" then",
+            "-e", "set trackName to name of current track",
+            "-e", "set trackArtist to artist of current track",
+            "-e", "set trackAlbum to album of current track",
+            "-e", "return \"STATUS:Playing\" & linefeed & \"TITLE:\" & trackName & linefeed & \"ARTIST:\" & trackArtist & linefeed & \"ALBUM:\" & trackAlbum",
+            "-e", "else",
+            "-e", "return \"STATUS:Paused\"",
+            "-e", "end if",
+            "-e", "else",
+            "-e", "return \"STATUS:NotRunning\"",
+            "-e", "end if",
+            "-e", "end tell"
+        ));
+    }
+
+    private TrackInfo parseMacTrackInfo(List<String> output) {
+        if (output == null || output.isEmpty()) {
+            return null;
+        }
+
+        String status = null;
+        String artist = "";
+        String title = "";
+        String album = "";
+
+        for (String line : output) {
+            if (line.startsWith("STATUS:")) {
+                status = line.substring(7);
+            } else if (line.startsWith("ARTIST:")) {
+                artist = line.substring(7);
+            } else if (line.startsWith("TITLE:")) {
+                title = line.substring(6);
+            } else if (line.startsWith("ALBUM:")) {
+                album = line.substring(6);
+            }
+        }
+
+        if (!"Playing".equals(status)) {
+            return null;
+        }
+
+        if (title == null || title.isEmpty()) {
+            return null;
+        }
+
+        String trackId = (title + "-" + artist).hashCode() + "";
+
+        return new TrackInfo(
+            trackId,
+            title.trim(),
+            artist != null && !artist.isEmpty() ? artist.trim() : "Unknown Artist",
+            album != null ? album.trim() : "",
+            true
+        );
+    }
     
     private List<String> executeWindowsCommand(String script) {
         try {
@@ -378,6 +474,33 @@ public class MprisListener {
         }
     }
     
+    private List<String> executeMacCommand(String... command) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            List<String> lines = new ArrayList<>();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                lines.add(line);
+            }
+
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                SmnToastClient.LOGGER.debug("Command returned exit code {}: {}",
+                    exitCode, String.join(" ", command));
+                return null;
+            }
+
+            return lines;
+        } catch (Exception e) {
+            SmnToastClient.LOGGER.debug("Command exception: {}", e.getMessage());
+            return null;
+        }
+    }
+
     private String executeCommand(String... command) {
         try {
             ProcessBuilder pb = new ProcessBuilder(command);
