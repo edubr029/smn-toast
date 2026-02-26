@@ -1,6 +1,7 @@
 package com.smntoast.client;
 
 import com.smntoast.client.mpris.MprisListener;
+import com.smntoast.client.mpris.TrackInfo;
 import com.smntoast.client.toast.MusicToast;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -73,7 +74,7 @@ public class SmnToastClient implements ClientModInitializer {
             showCurrentMusicToast(client);
         }
         
-        MprisListener.TrackInfo currentTrack = mprisListener.getCurrentTrack();
+        TrackInfo currentTrack = mprisListener.getCurrentTrack();
         
         if (currentTrack != null && currentTrack.isPlaying()) {
             String trackId = currentTrack.getTrackId();
@@ -99,7 +100,7 @@ public class SmnToastClient implements ClientModInitializer {
      * Caller must check MusicToast.isCurrentlyShowing() before calling.
      */
     private void showCurrentMusicToast(MinecraftClient client) {
-        MprisListener.TrackInfo currentTrack = mprisListener.getCurrentTrack();
+        TrackInfo currentTrack = mprisListener.getCurrentTrack();
         
         if (currentTrack != null && currentTrack.isPlaying()) {
             // Update lastTrackId to prevent automatic detection from showing the same track again
