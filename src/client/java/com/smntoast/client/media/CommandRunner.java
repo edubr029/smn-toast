@@ -24,13 +24,13 @@ public class CommandRunner {
             int exitCode = process.waitFor();
             if (exitCode != 0) {
                 SmnToastClient.LOGGER.debug("Command returned exit code {}", exitCode);
-                return null;
+                return new ArrayList<>();
             }
 
             return lines;
         } catch (Exception e) {
             SmnToastClient.LOGGER.debug("Command exception: {}", e.getMessage());
-            return null;
+            return new ArrayList<>();
         }
     }
 }

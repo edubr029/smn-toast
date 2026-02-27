@@ -2,8 +2,7 @@ package com.smntoast.client.media;
 
 import com.smntoast.client.SmnToastClient;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+import java.util.List;
 
 public class LinuxTrackFetcher implements TrackFetcher {
     private final boolean isFlatpak;
@@ -22,16 +21,15 @@ public class LinuxTrackFetcher implements TrackFetcher {
             if (isFlatpak) {
                 return fetchCurrentTrackDbus();
             }
-
-            String status = executeCommand("playerctl", "status");
+            String status = CommandRunner.runCommand("playerctl", "status").getFirst();
             if (status == null || !status.trim().equalsIgnoreCase("Playing")) {
                 return new TrackInfo("", "", "", "", false);
             }
 
-            String title = executeCommand("playerctl", "metadata", "title");
-            String artist = executeCommand("playerctl", "metadata", "artist");
-            String album = executeCommand("playerctl", "metadata", "album");
-            String trackId = executeCommand("playerctl", "metadata", "mpris:trackid");
+            String title = CommandRunner.runCommand("playerctl", "metadata", "title").getFirst();
+            String artist = CommandRunner.runCommand("playerctl", "metadata", "artist").getFirst();
+            String album = CommandRunner.runCommand("playerctl", "metadata", "album").getFirst();
+            String trackId = CommandRunner.runCommand("playerctl", "metadata", "mpris:trackid").getFirst();
 
             if (title == null || title.isEmpty()) {
                 return null;
@@ -99,27 +97,22 @@ public class LinuxTrackFetcher implements TrackFetcher {
 
     private String findMprisPlayer() {
         try {
-            ProcessBuilder pb = new ProcessBuilder(
+            List<String> output = CommandRunner.runCommand(
                     "dbus-send", "--session", "--dest=org.freedesktop.DBus",
                     "--type=method_call", "--print-reply",
                     "/org/freedesktop/DBus", "org.freedesktop.DBus.ListNames"
             );
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
+            for (String line : output) {
                 if (line.contains("org.mpris.MediaPlayer2.")) {
                     int start = line.indexOf("org.mpris.MediaPlayer2.");
                     int end = line.indexOf("\"", start);
                     if (end > start) {
-                        process.waitFor();
                         return line.substring(start, end);
                     }
                 }
             }
-            process.waitFor();
+
             return null;
         } catch (Exception e) {
             SmnToastClient.LOGGER.debug("Error finding MPRIS player: {}", e.getMessage());
@@ -129,7 +122,7 @@ public class LinuxTrackFetcher implements TrackFetcher {
 
     private String getDbusProperty(String player, String property) {
         try {
-            ProcessBuilder pb = new ProcessBuilder(
+            List<String> output = CommandRunner.runCommand(
                     "dbus-send", "--session", "--dest=" + player,
                     "--type=method_call", "--print-reply",
                     "/org/mpris/MediaPlayer2",
@@ -137,17 +130,8 @@ public class LinuxTrackFetcher implements TrackFetcher {
                     "string:org.mpris.MediaPlayer2.Player",
                     "string:" + property
             );
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            StringBuilder output = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-            process.waitFor();
-            return output.toString();
+            return String.join("\n", output);
         } catch (Exception e) {
             SmnToastClient.LOGGER.debug("Error getting D-Bus property: {}", e.getMessage());
             return null;
@@ -204,32 +188,4 @@ public class LinuxTrackFetcher implements TrackFetcher {
             return null;
         }
     }
-
-    private String executeCommand(String... command) {
-        try {
-            ProcessBuilder pb = new ProcessBuilder(command);
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            StringBuilder output = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line);
-            }
-
-            int exitCode = process.waitFor();
-            if (exitCode != 0) {
-                SmnToastClient.LOGGER.debug("Command returned exit code {}: {}",
-                        exitCode, String.join(" ", command));
-                return null;
-            }
-
-            return output.toString();
-        } catch (Exception e) {
-            SmnToastClient.LOGGER.debug("Command exception: {}", e.getMessage());
-            return null;
-        }
-    }
-
 }
