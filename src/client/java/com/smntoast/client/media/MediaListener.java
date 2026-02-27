@@ -1,4 +1,4 @@
-package com.smntoast.client.mpris;
+package com.smntoast.client.media;
 
 import com.smntoast.client.SmnToastClient;
 
@@ -8,8 +8,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * Cross-platform media listener that monitors music playback.
  * - Linux: Uses MPRIS via playerctl (supports native and Flatpak)
  * - Windows: Uses SMTC (System Media Transport Controls) via PowerShell
+ * - macOS: Uses AppleScript via osascript
  */
-public class MprisListener {
+public class MediaListener {
     private static final String OS_NAME = System.getProperty("os.name").toLowerCase();
     private static final boolean IS_WINDOWS = OS_NAME.contains("win");
     private static final boolean IS_LINUX = OS_NAME.contains("nux") || OS_NAME.contains("nix");
@@ -20,8 +21,7 @@ public class MprisListener {
     private volatile boolean running = false;
     private final AtomicReference<TrackInfo> currentTrack = new AtomicReference<>(null);
 
-    public MprisListener() {
-        
+    public MediaListener() {
         if (IS_WINDOWS) {
             SmnToastClient.LOGGER.info("Windows detected, using SMTC for media info");
             trackFetcher = new WindowsTrackFetcher();

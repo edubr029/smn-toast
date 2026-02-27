@@ -1,4 +1,4 @@
-package com.smntoast.client.mpris;
+package com.smntoast.client.media;
 
 public class TrackInfo {
     private final String trackId;

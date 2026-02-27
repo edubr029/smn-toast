@@ -1,7 +1,7 @@
 package com.smntoast.client;
 
-import com.smntoast.client.mpris.MprisListener;
-import com.smntoast.client.mpris.TrackInfo;
+import com.smntoast.client.media.MediaListener;
+import com.smntoast.client.media.TrackInfo;
 import com.smntoast.client.toast.MusicToast;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -18,7 +18,7 @@ public class SmnToastClient implements ClientModInitializer {
     public static final String MOD_ID = "smn-toast";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     
-    private MprisListener mprisListener;
+    private MediaListener mediaListener;
     private String lastTrackId = "";
     
     // Keybinding for showing current music toast (default: unbound)
@@ -41,14 +41,14 @@ public class SmnToastClient implements ClientModInitializer {
             smnToastCategory                  // Custom category
         ));
         
-        // Initialize MPRIS listener for Linux D-Bus
+        // Initialize media listener
         try {
-            mprisListener = new MprisListener();
-            mprisListener.start();
-            LOGGER.info("MPRIS listener started successfully");
+            mediaListener = new MediaListener();
+            mediaListener.start();
+            LOGGER.info("Media listener started successfully");
         } catch (Exception e) {
-            LOGGER.error("Failed to initialize MPRIS listener: {}", e.getMessage());
-            LOGGER.error("Make sure you're running on Linux with D-Bus support");
+            LOGGER.error("Failed to initialize media listener: {}", e.getMessage());
+            LOGGER.error("Make sure you're running on a supported OS");
             return;
         }
         
@@ -59,7 +59,7 @@ public class SmnToastClient implements ClientModInitializer {
     }
     
     private void onClientTick(MinecraftClient client) {
-        if (mprisListener == null || client.player == null) {
+        if (mediaListener == null || client.player == null) {
             return;
         }
         
@@ -74,7 +74,7 @@ public class SmnToastClient implements ClientModInitializer {
             showCurrentMusicToast(client);
         }
         
-        TrackInfo currentTrack = mprisListener.getCurrentTrack();
+        TrackInfo currentTrack = mediaListener.getCurrentTrack();
         
         if (currentTrack != null && currentTrack.isPlaying()) {
             String trackId = currentTrack.getTrackId();
@@ -100,7 +100,7 @@ public class SmnToastClient implements ClientModInitializer {
      * Caller must check MusicToast.isCurrentlyShowing() before calling.
      */
     private void showCurrentMusicToast(MinecraftClient client) {
-        TrackInfo currentTrack = mprisListener.getCurrentTrack();
+        TrackInfo currentTrack = mediaListener.getCurrentTrack();
         
         if (currentTrack != null && currentTrack.isPlaying()) {
             // Update lastTrackId to prevent automatic detection from showing the same track again

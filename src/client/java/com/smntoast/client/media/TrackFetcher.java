@@ -1,6 +1,5 @@
-package com.smntoast.client.mpris;
+package com.smntoast.client.media;
 
 public interface TrackFetcher {
     TrackInfo fetchCurrentTrack();
 }
-

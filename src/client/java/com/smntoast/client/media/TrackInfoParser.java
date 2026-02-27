@@ -1,4 +1,4 @@
-package com.smntoast.client.mpris;
+package com.smntoast.client.media;
 
 import java.util.List;
 
