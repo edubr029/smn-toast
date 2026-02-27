@@ -33,7 +33,7 @@ public class MediaListener {
             trackFetcher = new MacTrackFetcher();
         } else {
             SmnToastClient.LOGGER.warn("Unsupported OS: {}. Media detection may not work.", OS_NAME);
-            trackFetcher = null;
+            throw new IllegalStateException("Unsupported OS: " + OS_NAME);
         }
     }
     
