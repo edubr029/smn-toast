@@ -32,7 +32,7 @@ To manually show the current track, bind a key in Options → Controls → Key B
 ### Compatible Players
 - **Windows**: Spotify, Windows Media Player, browser media (Edge/Chrome), foobar2000, and any app using SMTC
 - **Linux**: Spotify, VLC, Firefox, Chromium, and any MPRIS-compatible player
-- **macOS**: Spotify, Music.app
+- **macOS**: Spotify, Music.app (Spotify has higher priority)
 
 ## Flatpak Users (Linux)
 If you're using a Flatpak launcher (like PrismLauncher), you need to grant permission for the mod to communicate with media players.
