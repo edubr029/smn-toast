@@ -11,7 +11,7 @@ System Music Notification Toast (SMN Toast) is a client-side Fabric mod that det
 - Automatic notifications — A toast appears whenever a new track starts playing
 - Manual trigger — Configurable keybind to show the current track on demand (unbound by default)
 - Clean design — Uses the vanilla Minecraft toast style
-- Cross-platform — Works on both Windows and Linux
+- Cross-platform — Works on Windows, Linux and macOS
 
 ### Platform Support
 
@@ -20,6 +20,7 @@ System Music Notification Toast (SMN Toast) is a client-side Fabric mod that det
 | **Windows** | SMTC (System Media Transport Controls) | None (built-in) |
 | **Linux** | MPRIS via D-Bus | None (native) or playerctl (non-Flatpak) |
 | **Linux (Flatpak)** | MPRIS via D-Bus | Permission grant (see below) |
+| **macOS** | AppleScript | Permission grant (see below) |
 
 ### How to use
 1. Install the mod in your Fabric mods folder
@@ -31,6 +32,7 @@ To manually show the current track, bind a key in Options → Controls → Key B
 ### Compatible Players
 - **Windows**: Spotify, Windows Media Player, browser media (Edge/Chrome), foobar2000, and any app using SMTC
 - **Linux**: Spotify, VLC, Firefox, Chromium, and any MPRIS-compatible player
+- **macOS**: Spotify, Music.app (Spotify has higher priority)
 
 ## Flatpak Users (Linux)
 If you're using a Flatpak launcher (like PrismLauncher), you need to grant permission for the mod to communicate with media players.
@@ -48,3 +50,8 @@ Or using **Flatseal**:
 Restart the launcher after applying the permission.
 
 > **Note**: This permission only allows communication with media players — it does not grant access to run commands on your host system.
+
+## macOS Permission
+macOS will prompt you to allow Minecraft (or your launcher) to control Spotify and/or Music.app. Allow it to enable track detection.
+
+If you denied it previously, go to **System Settings** → **Privacy & Security** → **Automation** and enable access for your launcher or Minecraft.
