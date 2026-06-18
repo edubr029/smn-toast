@@ -58,7 +58,7 @@ public class MediaListener {
     private void pollMedia() {
         while (running) {
             try {
-                TrackInfo track = trackFetcher == null ? null : trackFetcher.fetchCurrentTrack();
+                TrackInfo track = trackFetcher.fetchCurrentTrack();
                 if (track != null) {
                     currentTrack.set(track);
                 }

@@ -4,6 +4,7 @@ import com.smntoast.client.SmnToastClient;
 
 import java.util.List;
 
+
 public class LinuxTrackFetcher implements TrackFetcher {
     private final boolean isFlatpak;
 
@@ -21,15 +22,20 @@ public class LinuxTrackFetcher implements TrackFetcher {
             if (isFlatpak) {
                 return fetchCurrentTrackDbus();
             }
-            String status = CommandRunner.runCommand("playerctl", "status").getFirst();
+            List<String> statusOutput = CommandRunner.runCommand("playerctl", "status");
+            String status = statusOutput.isEmpty() ? null : statusOutput.getFirst();
             if (status == null || !status.trim().equalsIgnoreCase("Playing")) {
                 return new TrackInfo("", "", "", "", false);
             }
 
-            String title = CommandRunner.runCommand("playerctl", "metadata", "title").getFirst();
-            String artist = CommandRunner.runCommand("playerctl", "metadata", "artist").getFirst();
-            String album = CommandRunner.runCommand("playerctl", "metadata", "album").getFirst();
-            String trackId = CommandRunner.runCommand("playerctl", "metadata", "mpris:trackid").getFirst();
+            List<String> titleOutput = CommandRunner.runCommand("playerctl", "metadata", "title");
+            String title = titleOutput.isEmpty() ? null : titleOutput.getFirst();
+            List<String> artistOutput = CommandRunner.runCommand("playerctl", "metadata", "artist");
+            String artist = artistOutput.isEmpty() ? null : artistOutput.getFirst();
+            List<String> albumOutput = CommandRunner.runCommand("playerctl", "metadata", "album");
+            String album = albumOutput.isEmpty() ? null : albumOutput.getFirst();
+            List<String> trackIdOutput = CommandRunner.runCommand("playerctl", "metadata", "mpris:trackid");
+            String trackId = trackIdOutput.isEmpty() ? null : trackIdOutput.getFirst();
 
             if (title == null || title.isEmpty()) {
                 return null;
