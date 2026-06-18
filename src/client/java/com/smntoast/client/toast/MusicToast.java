@@ -1,30 +1,30 @@
 package com.smntoast.client.toast;
 
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.toast.Toast;
-import net.minecraft.client.toast.ToastManager;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.toasts.Toast;
+import net.minecraft.client.gui.components.toasts.ToastManager;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 public class MusicToast implements Toast {
-    private static final Identifier TEXTURE = Identifier.ofVanilla("toast/advancement");
+    private static final Identifier TEXTURE = Identifier.withDefaultNamespace("toast/advancement");
     private static final long DISPLAY_TIME = 5000L; // 5 seconds in milliseconds
     private static final long FADE_OUT_TIME = 600L; // Fade-out animation buffer
     
     // Static flag to track if a MusicToast is currently being displayed
     private static boolean isShowing = false;
     
-    private final Text title;
-    private final Text artist;
+    private final Component title;
+    private final Component artist;
     private long startTime;
     private boolean justUpdated;
     private Visibility visibility;
     
     public MusicToast(String songTitle, String artistName, String albumName) {
-        this.title = Text.literal(truncateText(songTitle, 25));
-        this.artist = Text.literal(truncateText(artistName, 30));
+        this.title = Component.literal(truncateText(songTitle, 25));
+        this.artist = Component.literal(truncateText(artistName, 30));
         this.justUpdated = true;
         this.visibility = Visibility.SHOW;
         isShowing = true;
@@ -48,7 +48,7 @@ public class MusicToast implements Toast {
     }
     
     @Override
-    public Visibility getVisibility() {
+    public Visibility getWantedVisibility() {
         return this.visibility;
     }
     
@@ -72,33 +72,33 @@ public class MusicToast implements Toast {
     }
     
     @Override
-    public void draw(DrawContext context, TextRenderer textRenderer, long time) {
+    public void extractRenderState(GuiGraphicsExtractor graphics, Font font, long fullyVisibleForMs) {
         // Draw toast background
-        context.drawGuiTexture(RenderPipelines.GUI_TEXTURED, TEXTURE, 0, 0, this.getWidth(), this.getHeight());
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, TEXTURE, 0, 0, width(), height());
         
         // Draw music icon (note symbol) - ARGB format with full alpha (0xFF prefix)
         String musicIcon = "\u266B"; // Music note symbol
-        context.drawText(textRenderer, musicIcon, 8, 12, 0xFF55FF55, true);
+        graphics.text(font, Component.literal(musicIcon), 8, 12, 0xFF55FF55, true);
         
         // Draw "Now Playing" header - yellow with shadow
-        context.drawText(textRenderer, Text.literal("Now Playing"), 26, 7, 0xFFFFFF00, true);
+        graphics.text(font, Component.literal("Now Playing"), 26, 7, 0xFFFFFF00, true);
         
         // Draw song title - white with shadow
-        context.drawText(textRenderer, this.title, 26, 18, 0xFFFFFFFF, true);
+        graphics.text(font, this.title, 26, 18, 0xFFFFFFFF, true);
         
         // Draw artist name - gray with shadow
         if (this.artist != null) {
-            context.drawText(textRenderer, this.artist, 26, 28, 0xFFAAAAAA, true);
+            graphics.text(font, this.artist, 26, 28, 0xFFAAAAAA, true);
         }
     }
     
     @Override
-    public int getWidth() {
+    public int width() {
         return 160;
     }
     
     @Override
-    public int getHeight() {
+    public int height() {
         return 42;
     }
 }

@@ -5,11 +5,11 @@ import com.smntoast.client.media.TrackInfo;
 import com.smntoast.client.toast.MusicToast;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.util.Identifier;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,21 +22,21 @@ public class SmnToastClient implements ClientModInitializer {
     private String lastTrackId = "";
     
     // Keybinding for showing current music toast (default: unbound)
-    private static KeyBinding showMusicToastKey;
+    private static KeyMapping showMusicToastKey;
     
     @Override
     public void onInitializeClient() {
         LOGGER.info("System Music Notification Toast initializing...");
         
         // Create custom category for SMN Toast keybindings
-        KeyBinding.Category smnToastCategory = KeyBinding.Category.create(
-            Identifier.of(MOD_ID, "keybindings")
+        KeyMapping.Category smnToastCategory = KeyMapping.Category.register(
+            Identifier.fromNamespaceAndPath(MOD_ID, "keybindings")
         );
         
         // Register keybinding for showing music toast manually (unbound by default)
-        showMusicToastKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        showMusicToastKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.smn-toast.show_music",       // Translation key for the keybinding name
-            InputUtil.Type.KEYSYM,            // Key type
+            InputConstants.Type.KEYSYM,       // Key type
             GLFW.GLFW_KEY_UNKNOWN,            // Default: unbound (user must configure)
             smnToastCategory                  // Custom category
         ));
@@ -58,14 +58,14 @@ public class SmnToastClient implements ClientModInitializer {
         LOGGER.info("System Music Notification Toast initialized successfully!");
     }
     
-    private void onClientTick(MinecraftClient client) {
+    private void onClientTick(Minecraft client) {
         if (mediaListener == null || client.player == null) {
             return;
         }
         
         // Check if the show music toast key was pressed (consume all queued presses)
         boolean keyWasPressed = false;
-        while (showMusicToastKey.wasPressed()) {
+        while (showMusicToastKey.consumeClick()) {
             keyWasPressed = true;
         }
         
@@ -89,7 +89,7 @@ public class SmnToastClient implements ClientModInitializer {
                     currentTrack.getAlbum()
                 );
                 
-                client.getToastManager().add(toast);
+                client.getToastManager().addToast(toast);
                 LOGGER.info("Now playing: {} - {}", currentTrack.getArtist(), currentTrack.getTitle());
             }
         }
@@ -99,7 +99,7 @@ public class SmnToastClient implements ClientModInitializer {
      * Shows the current music toast on demand (triggered by keybinding).
      * Caller must check MusicToast.isCurrentlyShowing() before calling.
      */
-    private void showCurrentMusicToast(MinecraftClient client) {
+    private void showCurrentMusicToast(Minecraft client) {
         TrackInfo currentTrack = mediaListener.getCurrentTrack();
         
         if (currentTrack != null && currentTrack.isPlaying()) {
@@ -112,7 +112,7 @@ public class SmnToastClient implements ClientModInitializer {
                 currentTrack.getAlbum()
             );
             
-            client.getToastManager().add(toast);
+            client.getToastManager().addToast(toast);
             LOGGER.debug("Manually showing current track: {} - {}", currentTrack.getArtist(), currentTrack.getTitle());
         } else {
             // Show a toast indicating no music is playing
@@ -121,7 +121,7 @@ public class SmnToastClient implements ClientModInitializer {
                 "Start playing music to see info",
                 ""
             );
-            client.getToastManager().add(toast);
+            client.getToastManager().addToast(toast);
         }
     }
 }
