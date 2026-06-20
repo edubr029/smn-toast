@@ -7,13 +7,57 @@ import java.util.List;
 
 public class LinuxTrackFetcher implements TrackFetcher {
     private final boolean isFlatpak;
+    private String[] startupAlert;
 
     public LinuxTrackFetcher() {
         this.isFlatpak = System.getenv("FLATPAK_ID") != null ||
                 new java.io.File("/.flatpak-info").exists();
+        this.startupAlert = checkAvailability();
         if (isFlatpak) {
             SmnToastClient.LOGGER.info("Flatpak environment detected, using D-Bus for MPRIS access");
         }
+    }
+
+    private String[] checkAvailability() {
+        if (isFlatpak) {
+            List<String> dbusTest = CommandRunner.runCommand(
+                    "dbus-send", "--session", "--dest=org.freedesktop.DBus",
+                    "--type=method_call", "--print-reply",
+                    "/org/freedesktop/DBus", "org.freedesktop.DBus.ListNames"
+            );
+            if (dbusTest.isEmpty()) {
+                SmnToastClient.LOGGER.warn("dbus-send not available in Flatpak");
+                return new String[]{"dbus-send not found", "D-Bus tools missing in Flatpak runtime"};
+            }
+            boolean mprisVisible = false;
+            for (String line : dbusTest) {
+                if (line.contains("org.mpris.MediaPlayer2.")) {
+                    mprisVisible = true;
+                    break;
+                }
+            }
+            if (!mprisVisible) {
+                SmnToastClient.LOGGER.warn("No MPRIS players visible via D-Bus in Flatpak — permission may not be granted");
+                return new String[]{"No MPRIS players found", "Check D-Bus permission or start a player"};
+            }
+        } else {
+            List<String> versionCheck = CommandRunner.runCommand("playerctl", "--version");
+            if (versionCheck.isEmpty()) {
+                SmnToastClient.LOGGER.warn("playerctl not found on PATH — media detection will not work");
+                return new String[]{"playerctl not installed", "Install it to enable music detection"};
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public String[] getStartupAlert() {
+        return startupAlert;
+    }
+
+    @Override
+    public void recheckAvailability() {
+        this.startupAlert = checkAvailability();
     }
 
     @Override

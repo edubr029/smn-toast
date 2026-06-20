@@ -20,6 +20,10 @@ public class MediaListener {
     private Thread listenerThread;
     private volatile boolean running = false;
     private final AtomicReference<TrackInfo> currentTrack = new AtomicReference<>(null);
+    private final AtomicReference<String[]> startupAlert = new AtomicReference<>(null);
+
+    private static final long RECHECK_INTERVAL_MS = 60000L;
+    private long lastRecheckTime = System.currentTimeMillis();
 
     public MediaListener() {
         if (IS_WINDOWS) {
@@ -35,6 +39,7 @@ public class MediaListener {
             SmnToastClient.LOGGER.warn("Unsupported OS: {}. Media detection may not work.", OS_NAME);
             throw new IllegalStateException("Unsupported OS: " + OS_NAME);
         }
+        startupAlert.set(trackFetcher.getStartupAlert());
     }
     
     public void start() {
@@ -58,6 +63,12 @@ public class MediaListener {
     private void pollMedia() {
         while (running) {
             try {
+                long now = System.currentTimeMillis();
+                if (now - lastRecheckTime >= RECHECK_INTERVAL_MS) {
+                    lastRecheckTime = now;
+                    trackFetcher.recheckAvailability();
+                    startupAlert.set(trackFetcher.getStartupAlert());
+                }
                 TrackInfo track = trackFetcher.fetchCurrentTrack();
                 if (track != null) {
                     currentTrack.set(track);
@@ -74,5 +85,9 @@ public class MediaListener {
 
     public TrackInfo getCurrentTrack() {
         return currentTrack.get();
+    }
+
+    public String[] getStartupAlert() {
+        return startupAlert.get();
     }
 }

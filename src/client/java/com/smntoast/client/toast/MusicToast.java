@@ -10,14 +10,11 @@ import net.minecraft.resources.Identifier;
 
 public class MusicToast implements Toast {
     private static final Identifier TEXTURE = Identifier.withDefaultNamespace("toast/advancement");
-    private static final long DISPLAY_TIME = 5000L; // 5 seconds in milliseconds
-    private static final long FADE_OUT_TIME = 600L; // Fade-out animation buffer
-    
-    // Static flag to track if a MusicToast is currently being displayed
-    private static boolean isShowing = false;
+    private static final long DISPLAY_TIME = 5000L;
     
     private final Component title;
     private final Component artist;
+    private final boolean alertMode;
     private long startTime;
     private boolean justUpdated;
     private Visibility visibility;
@@ -25,16 +22,17 @@ public class MusicToast implements Toast {
     public MusicToast(String songTitle, String artistName, String albumName) {
         this.title = Component.literal(truncateText(songTitle, 25));
         this.artist = Component.literal(truncateText(artistName, 30));
+        this.alertMode = false;
         this.justUpdated = true;
         this.visibility = Visibility.SHOW;
-        isShowing = true;
     }
     
-    /**
-     * Check if a MusicToast is currently being displayed
-     */
-    public static boolean isCurrentlyShowing() {
-        return isShowing;
+    public MusicToast(String title, String subtitle, boolean alertMode) {
+        this.title = Component.literal(truncateText(title, 25));
+        this.artist = Component.literal(truncateText(subtitle, 30));
+        this.alertMode = alertMode;
+        this.justUpdated = true;
+        this.visibility = Visibility.SHOW;
     }
     
     private String truncateText(String text, int maxLength) {
@@ -59,34 +57,28 @@ public class MusicToast implements Toast {
             this.justUpdated = false;
         }
         
-        // Check if display time has elapsed
         long elapsedTime = time - this.startTime;
         if (elapsedTime >= DISPLAY_TIME) {
             this.visibility = Visibility.HIDE;
-        }
-        
-        // Only clear the flag after fade-out animation completes
-        if (elapsedTime >= DISPLAY_TIME + FADE_OUT_TIME) {
-            isShowing = false;
         }
     }
     
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, Font font, long fullyVisibleForMs) {
-        // Draw toast background
         graphics.blitSprite(RenderPipelines.GUI_TEXTURED, TEXTURE, 0, 0, width(), height());
         
-        // Draw music icon (note symbol) - ARGB format with full alpha (0xFF prefix)
-        String musicIcon = "\u266B"; // Music note symbol
-        graphics.text(font, Component.literal(musicIcon), 8, 12, 0xFF55FF55, true);
+        if (alertMode) {
+            String warningIcon = "\u26A0";
+            graphics.text(font, Component.literal(warningIcon), 8, 12, 0xFFFFAA00, true);
+            graphics.text(font, Component.literal("Warning"), 26, 7, 0xFFFFAA00, true);
+        } else {
+            String musicIcon = "\u266B";
+            graphics.text(font, Component.literal(musicIcon), 8, 12, 0xFF55FF55, true);
+            graphics.text(font, Component.literal("Now Playing"), 26, 7, 0xFFFFFF00, true);
+        }
         
-        // Draw "Now Playing" header - yellow with shadow
-        graphics.text(font, Component.literal("Now Playing"), 26, 7, 0xFFFFFF00, true);
-        
-        // Draw song title - white with shadow
         graphics.text(font, this.title, 26, 18, 0xFFFFFFFF, true);
         
-        // Draw artist name - gray with shadow
         if (this.artist != null) {
             graphics.text(font, this.artist, 26, 28, 0xFFAAAAAA, true);
         }

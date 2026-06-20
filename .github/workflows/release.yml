@@ -1,43 +1,132 @@
-name: Build and Release
+name: release
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
-permissions:
-  contents: write
+env:
+  MC_VERSIONS: "26.2"
+  JAVA_VERSION: "25"
 
 jobs:
-  build:
+  release:
+    name: Build & Publish
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: write
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Validate version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          FULL_VERSION="${TAG#v}"
+          MOD_VERSION="${FULL_VERSION%%+*}"
+
+          GRADLE_VERSION=$(grep -E "^mod_version\s*=" gradle.properties \
+            | sed 's/.*=\s*//' | tr -d '[:space:]')
+
+          echo "Tag version   : $FULL_VERSION"
+          echo "Mod version   : $MOD_VERSION"
+          echo "Gradle version: $GRADLE_VERSION"
+
+          if [ "$FULL_VERSION" != "$GRADLE_VERSION" ]; then
+            echo "::error::Tag version ($FULL_VERSION) does not match mod_version in gradle.properties ($GRADLE_VERSION)"
+            exit 1
+          fi
+
+          echo "FULL_VERSION=$FULL_VERSION" >> "$GITHUB_ENV"
+          echo "MOD_VERSION=$MOD_VERSION"   >> "$GITHUB_ENV"
+
+      - name: Set release name
+        run: |
+          RELEASE_NAME="SMN Toast ${MOD_VERSION} for Minecraft ${MC_VERSIONS}"
+          echo "RELEASE_NAME=$RELEASE_NAME" >> "$GITHUB_ENV"
+
+      - name: Extract changelog
+        run: |
+          VERSION="$MOD_VERSION"
+
+          NOTES=$(awk \
+            "/^## \[${VERSION}\]/{found=1; next} found && /^## /{exit} found && /^---/{exit} found{print}" \
+            CHANGELOG.md)
+
+          if [ -z "$NOTES" ]; then
+            echo "::error::No entry for [${VERSION}] found in CHANGELOG.md"
+            exit 1
+          fi
+
+          NOTES=$(echo "$NOTES" | sed '/./,$!d')
+
+          printf '%s' "$NOTES" > release_notes.md
+          echo "Release notes preview:"
+          cat release_notes.md
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: '25'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Build
+        run: ./gradlew build --no-daemon
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Locate JAR
+        run: |
+          JAR=$(find build/libs -name "*.jar" \
+            ! -name "*-sources.jar" \
+            ! -name "*-javadoc.jar" \
+            | head -n 1)
 
-      - name: Get mod version
-        id: mod_version
-        run: echo "VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)" >> $GITHUB_OUTPUT
+          if [ -z "$JAR" ]; then
+            echo "::error::No JAR found in build/libs"
+            exit 1
+          fi
 
-      - name: Create Release
+          echo "JAR=$JAR" >> "$GITHUB_ENV"
+          echo "Found: $JAR"
+
+      - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ env.RELEASE_NAME }}
+          body_path: release_notes.md
+          files: |
+            ${{ env.JAR }}
+            build/libs/*-sources.jar
           draft: false
-          prerelease: false
-          files: build/libs/smn-toast-${{ steps.mod_version.outputs.VERSION }}.jar
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: >-
+            ${{
+              contains(github.ref_name, '-alpha') ||
+              contains(github.ref_name, '-beta')  ||
+              contains(github.ref_name, '-rc')
+            }}
+
+      - name: Publish to Modrinth
+        if: ${{ vars.MODRINTH_PROJECT_ID != '' && secrets.MODRINTH_TOKEN != '' }}
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+
+          name: ${{ env.RELEASE_NAME }}
+          version: ${{ env.FULL_VERSION }}
+          version-type: >-
+            ${{
+              contains(github.ref_name, '-alpha') && 'alpha' ||
+              contains(github.ref_name, '-beta')  && 'beta'  ||
+              contains(github.ref_name, '-rc')    && 'beta'  ||
+              'release'
+            }}
+          changelog-file: release_notes.md
+          files: |
+            ${{ env.JAR }}
+            build/libs/*-sources.jar
+
+          loaders: fabric
+          game-versions: ${{ env.MC_VERSIONS }}
+          java: ${{ env.JAVA_VERSION }}

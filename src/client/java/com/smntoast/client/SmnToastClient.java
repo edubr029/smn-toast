@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
@@ -20,6 +21,10 @@ public class SmnToastClient implements ClientModInitializer {
     
     private MediaListener mediaListener;
     private String lastTrackId = "";
+    private boolean startupAlertPending = false;
+    private ClientLevel lastLevel = null;
+    private long lastToastTime = 0;
+    private static final long TOAST_COOLDOWN_MS = 6500L;
     
     // Keybinding for showing current music toast (default: unbound)
     private static KeyMapping showMusicToastKey;
@@ -46,6 +51,10 @@ public class SmnToastClient implements ClientModInitializer {
             mediaListener = new MediaListener();
             mediaListener.start();
             LOGGER.info("Media listener started successfully");
+            String[] alert = mediaListener.getStartupAlert();
+            if (alert != null) {
+                startupAlertPending = true;
+            }
         } catch (Exception e) {
             LOGGER.error("Failed to initialize media listener: {}", e.getMessage());
             LOGGER.error("Make sure you're running on a supported OS");
@@ -59,29 +68,43 @@ public class SmnToastClient implements ClientModInitializer {
     }
     
     private void onClientTick(Minecraft client) {
+        if (startupAlertPending && client.player != null) {
+            startupAlertPending = false;
+            String[] alert = mediaListener.getStartupAlert();
+            if (alert != null) {
+                lastToastTime = System.currentTimeMillis();
+                MusicToast toast = new MusicToast(alert[0], alert[1], true);
+                client.gui.toastManager().addToast(toast);
+            }
+        }
+
         if (mediaListener == null || client.player == null) {
             return;
         }
+
+        ClientLevel currentLevel = client.level;
+        if (currentLevel != lastLevel) {
+            lastTrackId = "";
+            lastLevel = currentLevel;
+        }
         
-        // Check if the show music toast key was pressed (consume all queued presses)
         boolean keyWasPressed = false;
         while (showMusicToastKey.consumeClick()) {
             keyWasPressed = true;
         }
         
-        // Only show toast once per key press batch, and only if no toast is showing
-        if (keyWasPressed && !MusicToast.isCurrentlyShowing()) {
+        if (keyWasPressed && System.currentTimeMillis() - lastToastTime >= TOAST_COOLDOWN_MS) {
             showCurrentMusicToast(client);
         }
         
         TrackInfo currentTrack = mediaListener.getCurrentTrack();
-        
+
         if (currentTrack != null && currentTrack.isPlaying()) {
             String trackId = currentTrack.getTrackId();
             
-            // Only show toast when a new track starts playing (and no toast is already showing)
-            if (!trackId.equals(lastTrackId) && !MusicToast.isCurrentlyShowing()) {
+            if (!trackId.equals(lastTrackId) && System.currentTimeMillis() - lastToastTime >= TOAST_COOLDOWN_MS) {
                 lastTrackId = trackId;
+                lastToastTime = System.currentTimeMillis();
                 
                 MusicToast toast = new MusicToast(
                     currentTrack.getTitle(),
@@ -89,21 +112,25 @@ public class SmnToastClient implements ClientModInitializer {
                     currentTrack.getAlbum()
                 );
                 
-                client.getToastManager().addToast(toast);
+                client.gui.toastManager().addToast(toast);
                 LOGGER.info("Now playing: {} - {}", currentTrack.getArtist(), currentTrack.getTitle());
             }
         }
     }
     
-    /**
-     * Shows the current music toast on demand (triggered by keybinding).
-     * Caller must check MusicToast.isCurrentlyShowing() before calling.
-     */
     private void showCurrentMusicToast(Minecraft client) {
+        lastToastTime = System.currentTimeMillis();
+        String[] alert = mediaListener.getStartupAlert();
+
+        if (alert != null) {
+            MusicToast toast = new MusicToast(alert[0], alert[1], true);
+            client.gui.toastManager().addToast(toast);
+            return;
+        }
+
         TrackInfo currentTrack = mediaListener.getCurrentTrack();
         
         if (currentTrack != null && currentTrack.isPlaying()) {
-            // Update lastTrackId to prevent automatic detection from showing the same track again
             lastTrackId = currentTrack.getTrackId();
             
             MusicToast toast = new MusicToast(
@@ -112,16 +139,15 @@ public class SmnToastClient implements ClientModInitializer {
                 currentTrack.getAlbum()
             );
             
-            client.getToastManager().addToast(toast);
-            LOGGER.debug("Manually showing current track: {} - {}", currentTrack.getArtist(), currentTrack.getTitle());
+            client.gui.toastManager().addToast(toast);
+            LOGGER.info("Manually showing current track: {} - {}", currentTrack.getArtist(), currentTrack.getTitle());
         } else {
-            // Show a toast indicating no music is playing
             MusicToast toast = new MusicToast(
                 "No music playing",
                 "Start playing music to see info",
                 ""
             );
-            client.getToastManager().addToast(toast);
+            client.gui.toastManager().addToast(toast);
         }
     }
 }
