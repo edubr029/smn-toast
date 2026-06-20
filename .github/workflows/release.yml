@@ -107,10 +107,12 @@ jobs:
             }}
 
       - name: Publish to Modrinth
-        if: ${{ vars.MODRINTH_PROJECT_ID != '' }}
+        env:
+          MODRINTH_ID: ${{ secrets.MODRINTH_PROJECT_ID }}
+        if: ${{ env.MODRINTH_ID != '' }}
         uses: Kir-Antipov/mc-publish@v3.3
         with:
-          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-id: ${{ secrets.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
 
           name: ${{ env.RELEASE_NAME }}
