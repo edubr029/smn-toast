@@ -43,7 +43,7 @@ jobs:
 
       - name: Set release name
         run: |
-          RELEASE_NAME="SMN Toast ${MOD_VERSION} for Minecraft ${MC_VERSIONS}"
+          RELEASE_NAME="Release ${MOD_VERSION} for Minecraft ${MC_VERSIONS}"
           echo "RELEASE_NAME=$RELEASE_NAME" >> "$GITHUB_ENV"
 
       - name: Extract changelog
