@@ -1,6 +1,6 @@
 package com.smntoast.client.media;
 
-import com.smntoast.client.SmnToastClient;
+import com.smntoast.SmnToast;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -27,16 +27,16 @@ public class MediaListener {
 
     public MediaListener() {
         if (IS_WINDOWS) {
-            SmnToastClient.LOGGER.info("Windows detected, using SMTC for media info");
+            SmnToast.LOGGER.info("Windows detected, using SMTC for media info");
             trackFetcher = new WindowsTrackFetcher();
         } else if (IS_LINUX) {
-            SmnToastClient.LOGGER.info("Linux detected, using MPRIS for media info");
+            SmnToast.LOGGER.info("Linux detected, using MPRIS for media info");
             trackFetcher = new LinuxTrackFetcher();
         } else if (IS_MAC) {
-            SmnToastClient.LOGGER.info("macOS detected, using AppleScript for media info");
+            SmnToast.LOGGER.info("macOS detected, using AppleScript for media info");
             trackFetcher = new MacTrackFetcher();
         } else {
-            SmnToastClient.LOGGER.warn("Unsupported OS: {}. Media detection may not work.", OS_NAME);
+            SmnToast.LOGGER.warn("Unsupported OS: {}. Media detection may not work.", OS_NAME);
             throw new IllegalStateException("Unsupported OS: " + OS_NAME);
         }
         startupAlert.set(trackFetcher.getStartupAlert());
@@ -78,7 +78,7 @@ public class MediaListener {
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
-                SmnToastClient.LOGGER.debug("Media poll error: {}", e.getMessage());
+                SmnToast.LOGGER.debug("Media poll error: {}", e.getMessage());
             }
         }
     }

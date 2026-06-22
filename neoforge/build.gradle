@@ -1,0 +1,55 @@
+plugins {
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+
+base {
+    archivesName = "${rootProject.archives_base_name}-neoforge"
+}
+
+neoForge {
+    version = rootProject.neoforge_version
+
+    runs {
+        client { client() }
+        server { server() }
+    }
+
+    mods {
+        "smn_toast" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+// Include common source code
+sourceSets {
+    main {
+        java {
+            srcDir '../common/src/main/java'
+        }
+        resources {
+            srcDir '../common/src/main/resources'
+        }
+    }
+}
+
+processResources {
+    var replaceProperties = [
+            version: project.version,
+            minecraft_version: rootProject.minecraft_version
+    ]
+    inputs.properties(replaceProperties)
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand replaceProperties
+    }
+}
+
+java {
+    withSourcesJar()
+}
+
+jar {
+    from(rootProject.file("LICENSE")) {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}

@@ -1,6 +1,6 @@
 package com.smntoast.client.media;
 
-import com.smntoast.client.SmnToastClient;
+import com.smntoast.SmnToast;
 
 public class MacTrackFetcher implements TrackFetcher {
     @Override
@@ -33,7 +33,7 @@ public class MacTrackFetcher implements TrackFetcher {
                     "-e", "end tell"
             ));
         } catch (Exception e) {
-            SmnToastClient.LOGGER.debug("Error fetching Mac metadata: {}", e.getMessage());
+            SmnToast.LOGGER.debug("Error fetching Mac metadata: {}", e.getMessage());
             return null;
         }
     }

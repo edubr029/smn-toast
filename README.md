@@ -5,13 +5,14 @@ Display your currently playing music as a Minecraft toast notification.
 > This documentation is written with [PrismLauncher](https://github.com/PrismLauncher/PrismLauncher) in mind. Other launchers should work, but some commands (especially for Flatpak) may need adjustments for your specific launcher.
 
 ## What it does
-System Music Notification Toast (SMN Toast) is a client-side Fabric mod that detects music playing on your system and displays it as a toast notification in Minecraft. When a new track starts playing, you'll see a "Now Playing" toast showing the song title and artist name.
+System Music Notification Toast (SMN Toast) is a client-side mod for Fabric and NeoForge that detects music playing on your system and displays it as a toast notification in Minecraft. When a new track starts playing, you'll see a "Now Playing" toast showing the song title and artist name.
 
 ### Features
 - Automatic notifications — A toast appears whenever a new track starts playing
 - Manual trigger — Configurable keybind to show the current track on demand (unbound by default)
 - Clean design — Uses the vanilla Minecraft toast style
 - Cross-platform — Works on Windows, Linux and macOS
+- Multi-loader — Supports both Fabric and NeoForge
 
 ### Platform Support
 
@@ -23,7 +24,7 @@ System Music Notification Toast (SMN Toast) is a client-side Fabric mod that det
 | **macOS** | AppleScript | Permission grant (see below) |
 
 ### How to use
-1. Install the mod in your Fabric mods folder
+1. Install the mod in your Fabric or NeoForge mods folder
 2. Start playing music in any compatible player
 3. A toast will appear when a new track starts
 

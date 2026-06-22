@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-06-21
+
+### Added
+- NeoForge support (separate JAR, same features as Fabric)
+- Multi-loader project structure with shared common code
+- Dual JAR release workflow (Fabric + NeoForge published to Modrinth separately)
+
+### Changed
+- Restructured project to common/fabric/neoforge modules
+- Shared runtime logic extracted to SmnToastClientRuntime
+- Shared logger extracted to SmnToast class
+- Release workflow builds both JARs and publishes to Modrinth with correct loader tags
+
 ## [1.4.0] - 2026-06-20
 
 ### Added

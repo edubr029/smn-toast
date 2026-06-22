@@ -1,6 +1,6 @@
 package com.smntoast.client.media;
 
-import com.smntoast.client.SmnToastClient;
+import com.smntoast.SmnToast;
 
 public class WindowsTrackFetcher implements TrackFetcher {
     @Override
@@ -37,7 +37,7 @@ public class WindowsTrackFetcher implements TrackFetcher {
                     "-ExecutionPolicy", "Bypass",
                     "-Command", script));
         } catch (Exception e) {
-            SmnToastClient.LOGGER.debug("Error fetching SMTC metadata: {}", e.getMessage());
+            SmnToast.LOGGER.debug("Error fetching SMTC metadata: {}", e.getMessage());
             return null;
         }
     }

@@ -1,6 +1,6 @@
 package com.smntoast.client.media;
 
-import com.smntoast.client.SmnToastClient;
+import com.smntoast.SmnToast;
 
 import java.util.List;
 
@@ -14,7 +14,7 @@ public class LinuxTrackFetcher implements TrackFetcher {
                 new java.io.File("/.flatpak-info").exists();
         this.startupAlert = checkAvailability();
         if (isFlatpak) {
-            SmnToastClient.LOGGER.info("Flatpak environment detected, using D-Bus for MPRIS access");
+            SmnToast.LOGGER.info("Flatpak environment detected, using D-Bus for MPRIS access");
         }
     }
 
@@ -26,7 +26,7 @@ public class LinuxTrackFetcher implements TrackFetcher {
                     "/org/freedesktop/DBus", "org.freedesktop.DBus.ListNames"
             );
             if (dbusTest.isEmpty()) {
-                SmnToastClient.LOGGER.warn("dbus-send not available in Flatpak");
+                SmnToast.LOGGER.warn("dbus-send not available in Flatpak");
                 return new String[]{"dbus-send not found", "D-Bus tools missing in Flatpak runtime"};
             }
             boolean mprisVisible = false;
@@ -37,13 +37,13 @@ public class LinuxTrackFetcher implements TrackFetcher {
                 }
             }
             if (!mprisVisible) {
-                SmnToastClient.LOGGER.warn("No MPRIS players visible via D-Bus in Flatpak — permission may not be granted");
+                SmnToast.LOGGER.warn("No MPRIS players visible via D-Bus in Flatpak — permission may not be granted");
                 return new String[]{"No MPRIS players found", "Check D-Bus permission or start a player"};
             }
         } else {
             List<String> versionCheck = CommandRunner.runCommand("playerctl", "--version");
             if (versionCheck.isEmpty()) {
-                SmnToastClient.LOGGER.warn("playerctl not found on PATH — media detection will not work");
+                SmnToast.LOGGER.warn("playerctl not found on PATH — media detection will not work");
                 return new String[]{"playerctl not installed", "Install it to enable music detection"};
             }
         }
@@ -97,7 +97,7 @@ public class LinuxTrackFetcher implements TrackFetcher {
                     true
             );
         } catch (Exception e) {
-            SmnToastClient.LOGGER.debug("Error fetching MPRIS metadata: {}", e.getMessage());
+            SmnToast.LOGGER.debug("Error fetching MPRIS metadata: {}", e.getMessage());
             return null;
         }
     }
@@ -140,7 +140,7 @@ public class LinuxTrackFetcher implements TrackFetcher {
                     true
             );
         } catch (Exception e) {
-            SmnToastClient.LOGGER.debug("Error fetching D-Bus MPRIS metadata: {}", e.getMessage());
+            SmnToast.LOGGER.debug("Error fetching D-Bus MPRIS metadata: {}", e.getMessage());
             return null;
         }
     }
@@ -165,7 +165,7 @@ public class LinuxTrackFetcher implements TrackFetcher {
 
             return null;
         } catch (Exception e) {
-            SmnToastClient.LOGGER.debug("Error finding MPRIS player: {}", e.getMessage());
+            SmnToast.LOGGER.debug("Error finding MPRIS player: {}", e.getMessage());
             return null;
         }
     }
@@ -183,7 +183,7 @@ public class LinuxTrackFetcher implements TrackFetcher {
 
             return String.join("\n", output);
         } catch (Exception e) {
-            SmnToastClient.LOGGER.debug("Error getting D-Bus property: {}", e.getMessage());
+            SmnToast.LOGGER.debug("Error getting D-Bus property: {}", e.getMessage());
             return null;
         }
     }

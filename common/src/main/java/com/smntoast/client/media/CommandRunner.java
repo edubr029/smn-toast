@@ -1,6 +1,6 @@
 package com.smntoast.client.media;
 
-import com.smntoast.client.SmnToastClient;
+import com.smntoast.SmnToast;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -19,7 +19,7 @@ public class CommandRunner {
 
             if (!process.waitFor(TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                 process.destroyForcibly();
-                SmnToastClient.LOGGER.debug("Command timed out after {}ms: {}", TIMEOUT_MS, String.join(" ", command));
+                SmnToast.LOGGER.debug("Command timed out after {}ms: {}", TIMEOUT_MS, String.join(" ", command));
                 return new ArrayList<>();
             }
 
@@ -32,13 +32,13 @@ public class CommandRunner {
 
             int exitCode = process.exitValue();
             if (exitCode != 0) {
-                SmnToastClient.LOGGER.debug("Command returned exit code {}", exitCode);
+                SmnToast.LOGGER.debug("Command returned exit code {}", exitCode);
                 return new ArrayList<>();
             }
 
             return lines;
         } catch (Exception e) {
-            SmnToastClient.LOGGER.debug("Command exception: {}", e.getMessage());
+            SmnToast.LOGGER.debug("Command exception: {}", e.getMessage());
             return new ArrayList<>();
         }
     }
