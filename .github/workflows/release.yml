@@ -72,27 +72,19 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
 
       - name: Build
-        run: ./gradlew :fabric:build :neoforge:build --no-daemon
+        run: ./gradlew mergeJar --no-daemon
 
       - name: Locate JARs
         run: |
-          FABRIC_JAR=$(find fabric/build/libs -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -n 1)
-          NEOFORGE_JAR=$(find neoforge/build/libs -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -n 1)
+          UNIVERSAL_JAR=$(find build/libs -name "*.jar" | head -n 1)
 
-          if [ -z "$FABRIC_JAR" ]; then
-            echo "::error::No Fabric JAR found"
+          if [ -z "$UNIVERSAL_JAR" ]; then
+            echo "::error::No universal JAR found"
             exit 1
           fi
 
-          if [ -z "$NEOFORGE_JAR" ]; then
-            echo "::error::No NeoForge JAR found"
-            exit 1
-          fi
-
-          echo "FABRIC_JAR=$FABRIC_JAR" >> "$GITHUB_ENV"
-          echo "NEOFORGE_JAR=$NEOFORGE_JAR" >> "$GITHUB_ENV"
-          echo "Found Fabric: $FABRIC_JAR"
-          echo "Found NeoForge: $NEOFORGE_JAR"
+          echo "UNIVERSAL_JAR=$UNIVERSAL_JAR" >> "$GITHUB_ENV"
+          echo "Found universal JAR: $UNIVERSAL_JAR"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -101,8 +93,7 @@ jobs:
           name: ${{ env.RELEASE_NAME }}
           body_path: release_notes.md
           files: |
-            ${{ env.FABRIC_JAR }}
-            ${{ env.NEOFORGE_JAR }}
+            ${{ env.UNIVERSAL_JAR }}
           draft: false
           prerelease: >-
             ${{
@@ -111,7 +102,7 @@ jobs:
               contains(github.ref_name, '-rc')
             }}
 
-      - name: Publish Fabric to Modrinth
+      - name: Publish to Modrinth
         env:
           MODRINTH_ID: ${{ secrets.MODRINTH_PROJECT_ID }}
         if: ${{ env.MODRINTH_ID != '' }}
@@ -121,7 +112,7 @@ jobs:
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
 
           name: ${{ env.RELEASE_NAME }}
-          version: ${{ env.FULL_VERSION }}-fabric
+          version: ${{ env.FULL_VERSION }}
           version-type: >-
             ${{
               contains(github.ref_name, '-alpha') && 'alpha' ||
@@ -131,34 +122,8 @@ jobs:
             }}
           changelog-file: release_notes.md
           files: |
-            ${{ env.FABRIC_JAR }}
+            ${{ env.UNIVERSAL_JAR }}
 
-          loaders: fabric
-          game-versions: ${{ env.MC_VERSIONS }}
-          java: ${{ env.JAVA_VERSION }}
-
-      - name: Publish NeoForge to Modrinth
-        env:
-          MODRINTH_ID: ${{ secrets.MODRINTH_PROJECT_ID }}
-        if: ${{ env.MODRINTH_ID != '' }}
-        uses: Kir-Antipov/mc-publish@v3.3
-        with:
-          modrinth-id: ${{ secrets.MODRINTH_PROJECT_ID }}
-          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-
-          name: ${{ env.RELEASE_NAME }}
-          version: ${{ env.FULL_VERSION }}-neoforge
-          version-type: >-
-            ${{
-              contains(github.ref_name, '-alpha') && 'alpha' ||
-              contains(github.ref_name, '-beta')  && 'beta'  ||
-              contains(github.ref_name, '-rc')    && 'beta'  ||
-              'release'
-            }}
-          changelog-file: release_notes.md
-          files: |
-            ${{ env.NEOFORGE_JAR }}
-
-          loaders: neoforge
+          loaders: fabric neoforge
           game-versions: ${{ env.MC_VERSIONS }}
           java: ${{ env.JAVA_VERSION }}

@@ -5,18 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-06-22
+
+### Added
+- Single universal JAR works on both Fabric and NeoForge (no separate downloads)
+- Custom mergeJar Gradle task for producing universal JAR (no external dependencies)
+
+### Changed
+- NeoForge runtime initialization moved to FMLClientSetupEvent (proper lifecycle)
+- Release workflow builds single universal JAR and publishes to Modrinth with both loader tags
+- Removed unused maven-publish plugin from both subprojects
+- Consolidated shared resources (lang, icon) in common/
+
 ## [1.4.1] - 2026-06-21
 
 ### Added
-- NeoForge support (separate JAR, same features as Fabric)
+- NeoForge support (single universal JAR works on both Fabric and NeoForge)
 - Multi-loader project structure with shared common code
-- Dual JAR release workflow (Fabric + NeoForge published to Modrinth separately)
+- Custom mergeJar Gradle task for producing universal JAR (no external dependencies)
 
 ### Changed
 - Restructured project to common/fabric/neoforge modules
 - Shared runtime logic extracted to SmnToastClientRuntime
 - Shared logger extracted to SmnToast class
-- Release workflow builds both JARs and publishes to Modrinth with correct loader tags
+- Release workflow builds universal JAR and publishes to Modrinth with both loader tags
 
 ## [1.4.0] - 2026-06-20
 

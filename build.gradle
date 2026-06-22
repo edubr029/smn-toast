@@ -25,3 +25,30 @@ subprojects {
         }
     }
 }
+
+// Merges Fabric and NeoForge JARs into a single universal JAR.
+// Both loaders use Mojang official mappings, so shared classes produce
+// identical bytecode — no remapping or class relocation needed.
+// Each loader reads only its own metadata file and ignores the other.
+task mergeJar(type: Jar, dependsOn: [':fabric:build', ':neoforge:build']) {
+    archiveFileName = "${rootProject.archives_base_name}-${rootProject.mod_version}.jar"
+    destinationDirectory = file("${rootProject.buildDir}/libs")
+
+    def fabricJar = file("fabric/build/libs/${rootProject.archives_base_name}-fabric-${rootProject.mod_version}.jar")
+    def neoforgeJar = file("neoforge/build/libs/${rootProject.archives_base_name}-neoforge-${rootProject.mod_version}.jar")
+
+    inputs.files fabricJar, neoforgeJar
+
+    from(zipTree(fabricJar)) {
+        exclude 'LICENSE_smn-toast-fabric'
+    }
+    from(zipTree(neoforgeJar)) {
+        exclude 'LICENSE_smn-toast-neoforge'
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from(rootProject.file("LICENSE")) {
+        rename { "LICENSE" }
+    }
+}
